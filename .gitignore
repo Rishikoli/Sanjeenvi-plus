@@ -1,0 +1,59 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+# For project-specific dependencies, it's better to list them in a manifest file
+# (e.g., package.json, requirements.txt) and have collaborators install them.
+/node_modules
+/vendor
+/bower_components
+
+# Build artifacts and compiled files
+/build
+/dist
+/out
+/target
+*.class
+*.o
+*.so
+
+# Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# IDE and editor directories/files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+# Store sensitive information like API keys in these files and do not commit them.
+.env
+.env.local
+.env.*.local
+
+
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+
+# Ignore Docs folder
+Sanjeevni Plus/Docs/
+# Ignore database files
