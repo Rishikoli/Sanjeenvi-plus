@@ -1,0 +1,58 @@
+[
+  {
+    "code": "I25.10",
+    "code_system": "ICD-10",
+    "description": "Atherosclerotic heart disease of native coronary artery without angina pectoris",
+    "category": "Cardiovascular",
+    "version": "2025"
+  },
+  {
+    "code": "I25.11",
+    "code_system": "ICD-10", 
+    "description": "Atherosclerotic heart disease of native coronary artery with angina pectoris",
+    "category": "Cardiovascular",
+    "version": "2025"
+  },
+  {
+    "code": "33533",
+    "code_system": "CPT",
+    "description": "Coronary artery bypass, using arterial graft(s); single arterial graft",
+    "category": "Cardiovascular Surgery",
+    "version": "2025"
+  },
+  {
+    "code": "92928",
+    "code_system": "CPT",
+    "description": "Percutaneous transcatheter placement of intracoronary stent(s)",
+    "category": "Interventional Cardiology",
+    "version": "2025"
+  },
+  {
+    "code": "C78.00",
+    "code_system": "ICD-10",
+    "description": "Secondary malignant neoplasm of unspecified lung",
+    "category": "Oncology",
+    "version": "2025"
+  },
+  {
+    "code": "61510",
+    "code_system": "CPT",
+    "description": "Craniectomy, trephination, bone flap craniotomy; for excision of brain tumor",
+    "category": "Neurosurgery",
+    "version": "2025"
+  },
+  {
+    "code": "M17.11",
+    "code_system": "ICD-10",
+    "description": "Unilateral primary osteoarthritis, right knee",
+    "category": "Orthopedics",
+    "version": "2025"
+  },
+  {
+    "code": "27447",
+    "code_system": "CPT",
+    "description": "Arthroplasty, knee, condyle and plateau; medial AND lateral compartments",
+    "category": "Orthopedic Surgery",
+    "version": "2025"
+  }
+]

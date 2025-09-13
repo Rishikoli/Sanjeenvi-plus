@@ -14,6 +14,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRouter
 from pydantic import BaseModel, Field
 import uvicorn
 
@@ -27,6 +28,19 @@ from database.connection import DatabaseConnection
 from database.schema import DatabaseSchema
 from database.repository import ClaimsRepository, ProcessingStepsRepository, VectorQueriesRepository
 from models.claims import SubmissionStatus, ComplianceStatus
+from dotenv import load_dotenv
+
+# Load environment variables from .env at import time
+load_dotenv()
+
+# Suppress Hugging Face symlink warning by default (can be overridden via .env)
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+
+# Log whether HF_TOKEN is present (without printing its value)
+if os.getenv("HF_TOKEN"):
+    logging.getLogger(__name__).info("HF_TOKEN detected in environment (value not shown)")
+else:
+    logging.getLogger(__name__).warning("HF_TOKEN not set. Model downloads may be slower or rate-limited.")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -94,6 +108,57 @@ class KnowledgeBaseLoadRequest(BaseModel):
     """Request model for knowledge base loading."""
     data_type: str = Field(..., description="Type of data to load (packages, guidelines, medical_codes)")
     force_reload: bool = Field(False, description="Force reload even if data exists")
+
+# ===== KBMS (Knowledge Base Management Service) request models =====
+class KbIngestItem(BaseModel):
+    id: Optional[str] = None
+    text: str
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class KbIngestRequest(BaseModel):
+    collection: str = Field(..., description="Target collection name (e.g., pmjay_margdarshika)")
+    documents: List[KbIngestItem]
+    id_prefix: Optional[str] = "doc"
+
+
+class KbSearchRequest(BaseModel):
+    collection: str
+    q: str
+    limit: int = 10
+    where: Optional[Dict[str, Any]] = None
+
+
+class KbListRequest(BaseModel):
+    collection: str
+    limit: int = 50
+    offset: int = 0
+    where: Optional[Dict[str, Any]] = None
+
+
+class KbDeleteRequest(BaseModel):
+    collection: str
+    ids: List[str]
+
+
+class KbReloadRequest(BaseModel):
+    collections: Optional[List[str]] = None  # None or [pmjay_margdarshika, ayushman_package_suchi, rog_nidan_code_sangrah]
+
+class KbVersionSnapshotRequest(BaseModel):
+    collection: str
+    version_tag: Optional[str] = None  # if None, server will generate timestamp tag
+
+class KbVersionRollbackRequest(BaseModel):
+    collection: str
+    version_tag: str
+
+class KbVersionListRequest(BaseModel):
+    collection: str
+    limit: int = 20
+
+class KbAuditListRequest(BaseModel):
+    collection: Optional[str] = None
+    limit: int = 50
 
 
 # Dependency injection for services
@@ -323,6 +388,116 @@ async def list_claims(
     except Exception as e:
         logger.error(f"Failed to list claims: {e}")
         raise HTTPException(status_code=500, detail=f"Listing failed: {str(e)}")
+
+
+# ===== Include Routers =====
+
+# Import routers
+from routers import documents as documents_router
+from routers import claims as claims_router
+from routers import analytics as analytics_router
+from routers import portal as portal_router
+from routers import status as status_router
+
+# Include routers
+app.include_router(documents_router.router)
+app.include_router(claims_router.router)
+app.include_router(analytics_router.router)
+app.include_router(portal_router.router)
+app.include_router(status_router.router)
+
+# ===== KBMS endpoints =====
+@app.post("/kb/ingest")
+async def kb_ingest(request: KbIngestRequest, service: KnowledgeBaseService = Depends(get_knowledge_service)):
+    try:
+        result = service.ingest_documents(request.collection, [d.model_dump() for d in request.documents], id_prefix=request.id_prefix)
+        status_code = 200 if result.get("success") else 400
+        return JSONResponse(content=result, status_code=status_code)
+    except Exception as e:
+        logger.error(f"KB ingest error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/kb/search")
+async def kb_search(request: KbSearchRequest, service: KnowledgeBaseService = Depends(get_knowledge_service)):
+    try:
+        result = service.search(request.collection, request.q, n_results=request.limit, where=request.where)
+        return result
+    except Exception as e:
+        logger.error(f"KB search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/kb/sources")
+async def kb_sources(request: KbListRequest, service: KnowledgeBaseService = Depends(get_knowledge_service)):
+    try:
+        result = service.list_items(request.collection, limit=request.limit, offset=request.offset, where=request.where)
+        return result
+    except Exception as e:
+        logger.error(f"KB list error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/kb/item")
+async def kb_delete(request: KbDeleteRequest, service: KnowledgeBaseService = Depends(get_knowledge_service)):
+    try:
+        result = service.delete_items(request.collection, request.ids)
+        status_code = 200 if result.get("success") else 400
+        return JSONResponse(content=result, status_code=status_code)
+    except Exception as e:
+        logger.error(f"KB delete error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/kb/reload")
+async def kb_reload(request: KbReloadRequest, service: KnowledgeBaseService = Depends(get_knowledge_service)):
+    try:
+        result = service.hot_reload(request.collections)
+        status_code = 200 if result.get("success") else 400
+        return JSONResponse(content=result, status_code=status_code)
+    except Exception as e:
+        logger.error(f"KB reload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ===== KB Versioning & Audit APIs (9.2) =====
+@app.post("/kb/version/snapshot")
+async def kb_version_snapshot(request: KbVersionSnapshotRequest, service: KnowledgeBaseService = Depends(get_knowledge_service)):
+    try:
+        tag = request.version_tag or datetime.now().strftime("%Y%m%d%H%M%S")
+        result = service.create_version_snapshot(request.collection, tag)
+        status_code = 200 if result.get("success") else 400
+        return JSONResponse(content=result, status_code=status_code)
+    except Exception as e:
+        logger.error(f"KB snapshot error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/kb/version/rollback")
+async def kb_version_rollback(request: KbVersionRollbackRequest, service: KnowledgeBaseService = Depends(get_knowledge_service)):
+    try:
+        result = service.rollback_to_version(request.collection, request.version_tag)
+        status_code = 200 if result.get("success") else 400
+        return JSONResponse(content=result, status_code=status_code)
+    except Exception as e:
+        logger.error(f"KB rollback error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/kb/version/list")
+async def kb_version_list(request: KbVersionListRequest, service: KnowledgeBaseService = Depends(get_knowledge_service)):
+    try:
+        result = service.list_versions(request.collection, limit=request.limit)
+        return result
+    except Exception as e:
+        logger.error(f"KB version list error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/kb/audit/list")
+async def kb_audit_list(request: KbAuditListRequest, service: KnowledgeBaseService = Depends(get_knowledge_service)):
+    try:
+        result = service.list_audit(request.collection, limit=request.limit)
+        return result
+    except Exception as e:
+        logger.error(f"KB audit list error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/knowledge-base/load")

@@ -350,8 +350,9 @@ class DocumentProcessingService:
         
         # Name patterns
         name_patterns = [
-            r'patient\s*name[:\s]*([A-Za-z\s]+)',
-            r'name[:\s]*([A-Za-z\s]+)',
+            r'(?:patient\s*)?name[:\s]*(?:Dr\.?\s*|Mr\.?\s*|Mrs\.?\s*|Ms\.?\s*|Miss\s*)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+            r'(?:patient\s*)?name[:\s]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+            r'name[:\s]*(?:Dr\.?\s*|Mr\.?\s*|Mrs\.?\s*|Ms\.?\s*|Miss\s*)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)'
         ]
         
         for pattern in name_patterns:
@@ -414,8 +415,8 @@ class DocumentProcessingService:
                 procedure_text = match.group(1).strip()
                 if len(procedure_text) > 5:  # Reasonable procedure description length
                     procedures.append({
-                        "code": "",  # Would need medical coding system
-                        "description": procedure_text
+                        "procedure_code": "",  # Would need medical coding system
+                        "procedure_name": procedure_text
                     })
         
         return procedures
@@ -437,8 +438,8 @@ class DocumentProcessingService:
                 diagnosis_text = match.group(1).strip()
                 if len(diagnosis_text) > 3:
                     diagnoses.append({
-                        "code": "",  # Would need ICD coding
-                        "description": diagnosis_text
+                        "diagnosis_code": "",  # Would need ICD coding
+                        "diagnosis_name": diagnosis_text
                     })
         
         return diagnoses
@@ -522,8 +523,9 @@ class DocumentProcessingService:
             procedures = []
             for proc_data in extracted_data.get("procedures", []):
                 procedure = MedicalProcedure(
-                    code=proc_data.get("code", ""),
-                    description=proc_data.get("description", "")
+                    procedure_code=proc_data.get("procedure_code", ""),
+                    procedure_name=proc_data.get("procedure_name", ""),
+                    procedure_date=None
                 )
                 procedures.append(procedure)
             
@@ -531,8 +533,9 @@ class DocumentProcessingService:
             diagnoses = []
             for diag_data in extracted_data.get("diagnoses", []):
                 diagnosis = Diagnosis(
-                    code=diag_data.get("code", ""),
-                    description=diag_data.get("description", "")
+                    diagnosis_code=diag_data.get("diagnosis_code", ""),
+                    diagnosis_name=diag_data.get("diagnosis_name", ""),
+                    diagnosis_date=None
                 )
                 diagnoses.append(diagnosis)
             

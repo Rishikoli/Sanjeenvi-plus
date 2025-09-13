@@ -21,17 +21,35 @@ class ChromaService:
     
     def __init__(self, persist_directory: str = ".chroma"):
         """Initialize ChromaDB client with persistent storage."""
-        self.persist_directory = Path(persist_directory)
-        self.persist_directory.mkdir(exist_ok=True)
+        # Convert to absolute path and resolve any .. or .
+        persist_path = Path(persist_directory).absolute().resolve()
+        
+        # Ensure the directory exists and is writable
+        try:
+            persist_path.mkdir(parents=True, exist_ok=True)
+            # Test write access
+            test_file = persist_path / ".test_write"
+            test_file.touch()
+            test_file.unlink(missing_ok=True)
+        except Exception as e:
+            raise RuntimeError(f"Cannot write to persist directory {persist_path}: {e}")
+        
+        self.persist_directory = persist_path
+        logger.info(f"Using ChromaDB persist directory: {self.persist_directory}")
         
         # Initialize ChromaDB client with persistent storage
-        self.client = chromadb.PersistentClient(
-            path=str(self.persist_directory),
-            settings=Settings(
-                anonymized_telemetry=False,
-                allow_reset=True
+        try:
+            self.client = chromadb.PersistentClient(
+                path=str(self.persist_directory),
+                settings=Settings(
+                    anonymized_telemetry=False,
+                    allow_reset=True,
+                    # Additional settings for Windows compatibility
+                    is_persistent=True
+                )
             )
-        )
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize ChromaDB client: {e}")
         
         # Initialize embedding function for IBM Granite
         self.embedding_function = self._get_embedding_function()
@@ -45,18 +63,20 @@ class ChromaService:
     def _get_embedding_function(self):
         """Get IBM Granite embedding function."""
         try:
-            # Use Hugging Face embedding function with IBM Granite model
+            # Prefer default embeddings for local/dev tests to avoid network and token issues.
+            use_hf = os.getenv("USE_HF_EMBEDDINGS") == "1"
             hf_token = os.getenv("HF_TOKEN")
-            granite_model = os.getenv("GRANITE_EMBEDDING_MODEL", "ibm-granite/granite-embedding-50m-english")
-            
-            if hf_token:
-                return embedding_functions.HuggingFaceEmbeddingFunction(
-                    api_key=hf_token,
-                    model_name=granite_model
-                )
-            else:
-                logger.warning("HF_TOKEN not found, using default sentence transformer")
-                return embedding_functions.DefaultEmbeddingFunction()
+            if use_hf and hf_token:
+                granite_model = os.getenv("GRANITE_EMBEDDING_MODEL", "ibm-granite/granite-embedding-50m-english")
+                try:
+                    return embedding_functions.HuggingFaceEmbeddingFunction(
+                        api_key=hf_token,
+                        model_name=granite_model
+                    )
+                except Exception as he:
+                    logger.warning(f"Falling back to default embeddings due to HF init error: {he}")
+            # Default
+            return embedding_functions.DefaultEmbeddingFunction()
                 
         except Exception as e:
             logger.error(f"Failed to initialize embedding function: {e}")
@@ -161,6 +181,88 @@ class ChromaService:
             
         except Exception as e:
             logger.error(f"Failed to add medical codes: {e}")
+            raise
+
+    # ===== Generic helpers for Knowledge Base Management Service (KBMS) =====
+    def get_or_create_collection(self, name: str, description: str = ""):
+        """Get or create a generic collection by name with the configured embedding function."""
+        try:
+            try:
+                return self.client.get_collection(name=name, embedding_function=self.embedding_function)
+            except (ValueError, Exception):
+                return self.client.create_collection(
+                    name=name,
+                    embedding_function=self.embedding_function,
+                    metadata={"description": description}
+                )
+        except Exception as e:
+            logger.error(f"Failed to get/create collection {name}: {e}")
+            raise
+
+    def add_documents(self, collection_name: str, documents: List[str], metadatas: List[Dict[str, Any]], ids: List[str]) -> None:
+        """Add documents to a named collection."""
+        try:
+            collection = self.get_or_create_collection(collection_name, description=f"Generic collection: {collection_name}")
+            collection.add(documents=documents, metadatas=metadatas, ids=ids)
+            logger.info(f"Added {len(documents)} docs to collection {collection_name}")
+        except Exception as e:
+            logger.error(f"Failed to add documents to {collection_name}: {e}")
+            raise
+
+    def query(self, collection_name: str, query: str, n_results: int = 10, where: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Query a named collection using vector similarity."""
+        try:
+            collection = self.get_or_create_collection(collection_name, description=f"Generic collection: {collection_name}")
+            start_time = time.time()
+            results = collection.query(query_texts=[query], n_results=n_results, where=where)
+            query_time = (time.time() - start_time) * 1000
+            distances = results.get('distances', [[]])[0]
+            similarities = [1 - d for d in distances] if distances else []
+            return {
+                'documents': results.get('documents', [[]])[0],
+                'metadatas': results.get('metadatas', [[]])[0],
+                'ids': results.get('ids', [[]])[0],
+                'similarities': similarities,
+                'query_time_ms': query_time,
+                'result_count': len(results.get('documents', [[]])[0])
+            }
+        except Exception as e:
+            logger.error(f"Failed to query {collection_name}: {e}")
+            raise
+
+    def delete_by_id(self, collection_name: str, ids: List[str]) -> int:
+        """Delete items by IDs from a named collection. Returns count requested."""
+        try:
+            collection = self.get_or_create_collection(collection_name)
+            collection.delete(ids=ids)
+            logger.info(f"Deleted {len(ids)} ids from {collection_name}")
+            return len(ids)
+        except Exception as e:
+            logger.error(f"Failed to delete from {collection_name}: {e}")
+            raise
+
+    def list_items(self, collection_name: str, limit: int = 50, offset: int = 0, where: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """List items in a collection with pagination; returns subset by slicing ids order."""
+        try:
+            collection = self.get_or_create_collection(collection_name)
+            # Chroma doesn't have a direct list API; we use a broad query to fetch ids then slice
+            all_ids = collection.get(ids=None, where=where).get('ids', [])
+            total = len(all_ids)
+            sel_ids = all_ids[offset: offset + limit]
+            if not sel_ids:
+                return {"total": total, "items": [], "limit": limit, "offset": offset}
+            rows = collection.get(ids=sel_ids)
+            items = [
+                {
+                    "id": i,
+                    "document": d,
+                    "metadata": m
+                }
+                for i, d, m in zip(rows.get('ids', []), rows.get('documents', []), rows.get('metadatas', []))
+            ]
+            return {"total": total, "items": items, "limit": limit, "offset": offset}
+        except Exception as e:
+            logger.error(f"Failed to list items from {collection_name}: {e}")
             raise
     
     def search_pmjay_guidelines(

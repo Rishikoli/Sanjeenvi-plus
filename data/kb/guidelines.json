@@ -1,0 +1,52 @@
+[
+  {
+    "guideline_id": "GUIDE_001",
+    "title": "Pre-authorization Requirements",
+    "content": "All high-value procedures (>₹50,000) require pre-authorization within 48 hours of admission. Submit complete documentation including medical history, diagnostic reports, and treatment plan.",
+    "category": "authorization",
+    "effective_date": "2025-01-01",
+    "version": "2025.1",
+    "priority": 5,
+    "circular_number": "NHA/PMJAY/2025/001"
+  },
+  {
+    "guideline_id": "GUIDE_002", 
+    "title": "Eligibility Verification",
+    "content": "Patient eligibility must be verified against empanelment database before treatment initiation. Real-time verification is mandatory for all procedures.",
+    "category": "eligibility",
+    "effective_date": "2025-01-01",
+    "version": "2025.1",
+    "priority": 5,
+    "circular_number": "NHA/PMJAY/2025/002"
+  },
+  {
+    "guideline_id": "GUIDE_003",
+    "title": "Documentation Standards",
+    "content": "All medical records must be maintained in digital format with proper timestamps. Handwritten notes must be digitized within 24 hours.",
+    "category": "documentation",
+    "effective_date": "2025-01-01",
+    "version": "2025.1",
+    "priority": 3,
+    "circular_number": "NHA/PMJAY/2025/003"
+  },
+  {
+    "guideline_id": "GUIDE_004",
+    "title": "Emergency Procedures Protocol",
+    "content": "Emergency procedures can be initiated without pre-authorization. Post-procedure documentation must be submitted within 72 hours.",
+    "category": "emergency",
+    "effective_date": "2025-01-01",
+    "version": "2025.1",
+    "priority": 4,
+    "circular_number": "NHA/PMJAY/2025/004"
+  },
+  {
+    "guideline_id": "GUIDE_005",
+    "title": "Quality Assurance Standards",
+    "content": "All empaneled hospitals must maintain minimum quality standards. Regular audits will be conducted to ensure compliance.",
+    "category": "quality",
+    "effective_date": "2025-01-01",
+    "version": "2025.1",
+    "priority": 3,
+    "circular_number": "NHA/PMJAY/2025/005"
+  }
+]

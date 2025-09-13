@@ -1,0 +1,46 @@
+[
+  {
+    "package_code": "HBP-001",
+    "package_name": "Coronary Artery Bypass Graft Surgery",
+    "specialty": "Cardiothoracic Surgery",
+    "procedure_type": "Surgical",
+    "package_rate": 150000,
+    "effective_date": "2025-01-01",
+    "description": "Surgical procedure to improve blood flow to the heart muscle",
+    "inclusions": ["Surgery", "ICU stay", "Medications", "Follow-up"],
+    "exclusions": ["Complications beyond 30 days", "Revision surgery"]
+  },
+  {
+    "package_code": "HBP-002",
+    "package_name": "Percutaneous Coronary Intervention",
+    "specialty": "Interventional Cardiology",
+    "procedure_type": "Interventional",
+    "package_rate": 75000,
+    "effective_date": "2025-01-01",
+    "description": "Minimally invasive procedure to open blocked coronary arteries",
+    "inclusions": ["Procedure", "Stent", "Monitoring", "Discharge"],
+    "exclusions": ["Emergency complications", "Additional stents"]
+  },
+  {
+    "package_code": "NEU-001",
+    "package_name": "Brain Tumor Surgery",
+    "specialty": "Neurosurgery",
+    "procedure_type": "Surgical",
+    "package_rate": 200000,
+    "effective_date": "2025-01-01",
+    "description": "Surgical removal of brain tumors",
+    "inclusions": ["Surgery", "ICU", "Imaging", "Pathology"],
+    "exclusions": ["Chemotherapy", "Radiation therapy"]
+  },
+  {
+    "package_code": "ORT-001",
+    "package_name": "Total Knee Replacement",
+    "specialty": "Orthopedics",
+    "procedure_type": "Surgical",
+    "package_rate": 120000,
+    "effective_date": "2025-01-01",
+    "description": "Complete knee joint replacement surgery",
+    "inclusions": ["Surgery", "Implant", "Physiotherapy", "Follow-up"],
+    "exclusions": ["Revision surgery", "Complications after 90 days"]
+  }
+]

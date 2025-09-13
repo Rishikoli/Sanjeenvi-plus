@@ -50,16 +50,15 @@ class PackageRecommendation(BaseModel):
 
 class RiskAssessment(BaseModel):
     """Represents a risk assessment for a claim."""
-    risk_score: float = Field(..., ge=0, le=1, description="Overall risk score.")
-    denial_probability: float = Field(
-        ..., ge=0, le=1, description="Probability of claim denial."
-    )
+    overall_risk_score: float = Field(..., ge=0, le=1, description="Overall risk score.")
+    risk_level: str = Field(..., description="Risk level: LOW, MEDIUM, or HIGH.")
     risk_factors: List[str] = Field(
         default_factory=list, description="Identified risk factors."
     )
-    mitigation_suggestions: List[str] = Field(
-        default_factory=list, description="Suggestions to mitigate risks."
+    fraud_indicators: List[str] = Field(
+        default_factory=list, description="Potential fraud indicators."
     )
+    recommendation: str = Field(..., description="Processing recommendation: AUTO_APPROVE or MANUAL_REVIEW.")
 
 
 class ClaimSubmission(BaseModel):
@@ -67,8 +66,8 @@ class ClaimSubmission(BaseModel):
     claim_id: str = Field(..., description="Unique identifier for the claim.")
     hospital_id: str = Field(..., description="Identifier for the submitting hospital.")
     patient_data: MedicalRecord = Field(..., description="Medical record data.")
-    recommended_package: PackageRecommendation = Field(
-        ..., description="Recommended PM-JAY package."
+    recommended_package: Optional[PackageRecommendation] = Field(
+        None, description="Recommended PM-JAY package."
     )
     risk_assessment: Optional[RiskAssessment] = Field(
         None, description="Risk assessment for the claim."

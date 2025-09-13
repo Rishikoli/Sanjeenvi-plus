@@ -27,6 +27,137 @@ from models.medical import PatientInfo, MedicalRecord, MedicalProcedure, Diagnos
 from models.claims import PackageRecommendation, RiskAssessment, ComplianceStatus, SubmissionStatus
 
 
+# Module-level fixtures to be accessible across classes
+@pytest_asyncio.fixture
+async def mock_services():
+    """Create mock services for testing (module-level)."""
+    document_service = Mock(spec=DocumentProcessingService)
+    chroma_service = Mock(spec=ChromaService)
+    language_service = Mock(spec=GraniteLanguageDetectionService)
+    embedding_service = Mock(spec=GraniteEmbeddingService)
+    claims_repository = Mock(spec=ClaimsRepository)
+    steps_repository = Mock(spec=ProcessingStepsRepository)
+    vector_repository = Mock(spec=VectorQueriesRepository)
+
+    # Configure async methods
+    document_service.process_document = AsyncMock()
+    document_service.health_check = AsyncMock()
+    claims_repository.create_claim = AsyncMock()
+    claims_repository.get_claim = AsyncMock()
+    claims_repository.update_claim_status = AsyncMock()
+    claims_repository.increment_retry_count = AsyncMock()
+    steps_repository.log_step = AsyncMock()
+    steps_repository.get_steps_for_claim = AsyncMock()
+    vector_repository.log_vector_query = AsyncMock()
+    vector_repository.get_queries_for_claim = AsyncMock()
+    embedding_service.health_check = AsyncMock()
+
+    return {
+        "document_service": document_service,
+        "chroma_service": chroma_service,
+        "language_service": language_service,
+        "embedding_service": embedding_service,
+        "claims_repository": claims_repository,
+        "steps_repository": steps_repository,
+        "vector_repository": vector_repository,
+    }
+
+
+@pytest.fixture
+def sample_medical_record():
+    """Module-level sample medical record for performance tests."""
+    patient = PatientInfo(
+        patient_id="P12345",
+        name="John Doe",
+        age=45,
+        gender="Male"
+    )
+
+    procedure = MedicalProcedure(
+        procedure_name="Cardiac Bypass Surgery",
+        procedure_code="CABG-001",
+        procedure_date=datetime(2024, 1, 16)
+    )
+
+    diagnosis = Diagnosis(
+        diagnosis_name="Coronary Artery Disease",
+        diagnosis_code="I25.1",
+        diagnosis_date=datetime(2024, 1, 15)
+    )
+
+    return MedicalRecord(
+        patient_info=patient,
+        hospital_id="H001",
+        admission_date=datetime(2024, 1, 15),
+        discharge_date=datetime(2024, 1, 20),
+        procedures=[procedure],
+        diagnoses=[diagnosis],
+        total_amount=Decimal("150000.00"),
+        document_confidence=0.92
+    )
+
+
+@pytest.fixture
+def sample_ocr_result(sample_medical_record):
+    """Module-level OCR result used by performance tests."""
+    ocr_result = OCRResult(
+        text="Sample medical document text",
+        confidence=0.92,
+        language="english",
+        processing_time_ms=1500.0,
+        page_count=2,
+        method="docling",
+        metadata={"pages": 2}
+    )
+
+    return DocumentProcessingResult(
+        ocr_result=ocr_result,
+        extracted_data=None,
+        medical_record=sample_medical_record,
+        validation_errors=[],
+        requires_verification=False,
+        processing_summary={"success": True, "confidence": 0.92}
+    )
+
+
+@pytest.fixture
+def sample_search_results():
+    """Module-level search results used by performance tests."""
+    return {
+        "pmjay_results": [
+            {
+                "document": "PM-JAY cardiac surgery package guidelines",
+                "metadata": {
+                    "package_code": "CARD-001",
+                    "package_name": "Cardiac Surgery Package",
+                    "doc_id": 1
+                },
+                "distance": 0.2
+            },
+            {
+                "document": "Coronary artery disease treatment protocol",
+                "metadata": {
+                    "package_code": "CARD-002",
+                    "package_name": "CAD Treatment Package",
+                    "doc_id": 2
+                },
+                "distance": 0.3
+            }
+        ],
+        "medical_codes_results": [
+            {
+                "document": "ICD-10 code I25.1 for coronary artery disease",
+                "metadata": {"code": "I25.1", "category": "cardiovascular"},
+                "distance": 0.1
+            }
+        ],
+        "search_queries": [
+            "PM-JAY package for Coronary Artery Disease",
+            "Medical package Cardiac Bypass Surgery"
+        ]
+    }
+
+
 class TestClaimsIntelligenceService:
     """Test suite for Claims Intelligence Service."""
     

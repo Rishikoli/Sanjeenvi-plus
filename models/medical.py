@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -15,14 +15,16 @@ class PatientInfo(BaseModel):
 
 class MedicalProcedure(BaseModel):
     """Represents a single medical procedure performed."""
-    code: str = Field(..., description="Procedure code (e.g., ICD-10-PCS).")
-    description: str = Field(..., description="Description of the medical procedure.")
+    procedure_code: str = Field(..., description="Procedure code (e.g., ICD-10-PCS).")
+    procedure_name: str = Field(..., description="Name/description of the medical procedure.")
+    procedure_date: Optional[datetime] = Field(None, description="Date of the procedure if available.")
 
 
 class Diagnosis(BaseModel):
     """Represents a single diagnosis."""
-    code: str = Field(..., description="Diagnosis code (e.g., ICD-10).")
-    description: str = Field(..., description="Description of the diagnosis.")
+    diagnosis_code: str = Field(..., description="Diagnosis code (e.g., ICD-10).")
+    diagnosis_name: str = Field(..., description="Name/description of the diagnosis.")
+    diagnosis_date: Optional[datetime] = Field(None, description="Date of diagnosis if available.")
 
 
 class MedicalRecord(BaseModel):
@@ -33,7 +35,7 @@ class MedicalRecord(BaseModel):
     discharge_date: datetime
     procedures: List[MedicalProcedure]
     diagnoses: List[Diagnosis]
-    total_amount: Decimal = Field(..., gt=0, description="Total amount on the claim.")
+    total_amount: Decimal = Field(..., ge=0, description="Total amount on the claim.")
     document_confidence: float = Field(
         ..., ge=0, le=1, description="OCR confidence score for the source document."
     )

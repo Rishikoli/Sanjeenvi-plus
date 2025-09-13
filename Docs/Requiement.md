@@ -1,4 +1,3 @@
-<img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
 
 # Requirements Document
 
@@ -78,7 +77,7 @@ Sanjeevani Plus is an AI co-pilot system designed to automate healthcare claims 
 
 ***
 
-<span style="display:none"></span>[^1]
+
 
 <div style="text-align: center">⁂</div>
 <span style="display:none">[^2][^3][^4][^5][^6][^7][^8][^9]</span>
@@ -103,3 +102,31 @@ Sanjeevani Plus is an AI co-pilot system designed to automate healthcare claims 
 
 [^9]: https://www.klippa.com/en/blog/information/claims-processing-automation/
 
+
+
+## Requirement 6: Orchestration & Security
+
+**User Story:** As a platform owner, I want secure, reliable orchestration of portal automations and APIs so that hospital data remains protected while automations run at scale.
+
+#### Acceptance Criteria
+
+1. WHEN orchestrating portal tasks THEN the system SHALL use WatsonX Orchestrate skills with API key authentication and tenant scoping
+2. WHEN Orchestrate is unavailable THEN the system SHALL fallback to direct portal API calls without service downtime
+3. WHEN calling external services THEN the system SHALL not log PHI/PII in plaintext and SHALL mask secrets in logs
+4. WHEN users access APIs THEN the system SHALL enforce role-based authorization (Admin, Operator, ReadOnly)
+5. WHEN secrets are required THEN the system SHALL load them via environment variables or secret manager, never hardcoded
+6. WHEN errors occur in orchestration runs THEN the system SHALL emit structured alerts (email/Slack) with correlation IDs
+
+
+## Requirement 7: Deployment & Operations
+
+**User Story:** As a DevOps engineer, I want a reliable deployment pipeline and runtime observability so that we can operate Sanjeevni Plus in production confidently.
+
+#### Acceptance Criteria
+
+1. WHEN building the app THEN a container image SHALL be produced with pinned dependencies and health endpoints
+2. WHEN deployed to staging/prod THEN configuration SHALL be environment-driven with safe defaults
+3. WHEN the service starts THEN liveness and readiness endpoints SHALL reflect database and Chroma health
+4. WHEN collecting metrics THEN system and application KPIs SHALL be exported for dashboards (CPU, memory, API latency, success rate)
+5. WHEN errors exceed thresholds THEN alerting SHALL trigger to on-call channels with runbooks linked
+6. WHEN running CI THEN unit and integration tests SHALL pass with coverage thresholds >= 80%
