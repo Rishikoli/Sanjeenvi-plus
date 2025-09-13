@@ -214,3 +214,164 @@ You should see tests for:
 ---
 
 ## 📚 Knowledge Base Management Service (KBMS)
+
+The KBMS provides hot-reload knowledge base management with Indian-named collections for PM-JAY guidelines, packages, and medical codes. It supports multilingual content ingestion, vector search, and CRUD operations.
+
+### Collections
+
+- **`pmjay_margdarshika`** - PM-JAY guidelines and circulars
+- **`ayushman_package_suchi`** - Package master data  
+- **`rog_nidan_code_sangrah`** - Medical code systems (ICD-10, CPT, etc.)
+
+### API Endpoints
+
+#### Ingest Documents
+```bash
+POST /kb/ingest
+Content-Type: application/json
+
+{
+  "collection": "pmjay_margdarshika",
+  "id_prefix": "guide",
+  "documents": [
+    {
+      "id": "guide_pre_auth_001",
+      "text": "Pre-auth must be filed within 24 hours of admission for high-value packages.",
+      "metadata": {
+        "lang": "hi",
+        "guideline_type": "circular",
+        "applies_to": "pre_auth",
+        "section": "Pre-Auth",
+        "clause_ref": "Chapter-2.4",
+        "state": "All-India",
+        "scheme_version": "PMJAY_2025_01",
+        "tags": "pre_auth, timelines, compliance"
+      }
+    }
+  ]
+}
+```
+
+#### Search Knowledge Base
+```bash
+POST /kb/search
+Content-Type: application/json
+
+{
+  "collection": "pmjay_margdarshika",
+  "q": "pre authorization timeline",
+  "limit": 5,
+  "where": {
+    "lang": "hi",
+    "applies_to": "pre_auth"
+  }
+}
+```
+
+#### List Sources (Pagination)
+```bash
+POST /kb/sources
+Content-Type: application/json
+
+{
+  "collection": "pmjay_margdarshika",
+  "limit": 20,
+  "offset": 0,
+  "where": {
+    "guideline_type": "circular"
+  }
+}
+```
+
+#### Delete Items
+```bash
+DELETE /kb/item
+Content-Type: application/json
+
+{
+  "collection": "pmjay_margdarshika",
+  "ids": ["guide_pre_auth_001", "guide_discharge_002"]
+}
+```
+
+#### Hot Reload Collections
+```bash
+POST /kb/reload
+Content-Type: application/json
+
+{
+  "collections": ["pmjay_margdarshika", "ayushman_package_suchi", "rog_nidan_code_sangrah"]
+}
+```
+
+### Metadata Schema Examples
+
+#### Guidelines (`pmjay_margdarshika`)
+```json
+{
+  "lang": "hi|en|mr",
+  "guideline_type": "circular|sop|notification",
+  "applies_to": "pre_auth|discharge|eligibility|billing",
+  "section": "Pre-Auth|Discharge|Eligibility",
+  "clause_ref": "Chapter-X.Y",
+  "state": "All-India|Maharashtra|Karnataka",
+  "scheme_version": "PMJAY_2025_01",
+  "tags": "comma, separated, keywords"
+}
+```
+
+#### Packages (`ayushman_package_suchi`)
+```json
+{
+  "package_code": "HBP-001",
+  "specialty": "Cardiothoracic Surgery",
+  "procedure_type": "Surgical|Medical|Diagnostic",
+  "package_rate": 150000,
+  "pre_auth_required": true,
+  "state_specific": false,
+  "effective_date": "2025-01-01"
+}
+```
+
+#### Medical Codes (`rog_nidan_code_sangrah`)
+```json
+{
+  "code_system": "ICD-10|CPT|SNOMED",
+  "code": "I25.10",
+  "category": "Cardiovascular",
+  "subcategory": "Coronary artery disease",
+  "pmjay_covered": true,
+  "reimbursement_rate": 5000,
+  "synonyms": "CAD, Coronary atherosclerosis"
+}
+```
+
+### Environment Variables
+
+```bash
+# Use Hugging Face embeddings (optional, defaults to local)
+USE_HF_EMBEDDINGS=1
+HF_TOKEN=your_hugging_face_token
+GRANITE_EMBEDDING_MODEL=ibm-granite/granite-embedding-50m-english
+```
+
+### Testing
+
+```bash
+# Run KBMS tests
+python -m pytest tests/test_kbms.py -v
+
+# Test with sample data
+python -c "
+from services.knowledge_base_service import get_knowledge_base_service
+kb = get_knowledge_base_service()
+print(kb.hot_reload())
+print(kb.get_knowledge_base_stats())
+"
+```
+
+### Related Files
+
+- `services/knowledge_base_service.py` — KBMS core service with Indian collections
+- `services/chroma_service.py` — ChromaDB integration with generic helpers
+- `tests/test_kbms.py` — KBMS functionality tests
